@@ -24,7 +24,8 @@ namespace SortFaxes
 		public string IncomingDir;
 		public string ConfigFile="cfg.ini";
 		public IniFile cfg;
-		
+		public List<CONSTS.Filter> filters;
+		public QueueFiles AllFiles;
 		public MainForm()
 		{
 
@@ -32,25 +33,107 @@ namespace SortFaxes
 			this.FormClosing+=formClosingMethod;
 			dataGridView1.DataBindingComplete += DataGridView1_DataBindingComplete;
 			dataGridView1.CellContentClick += cellClick;
+			dataGridView1.CellClick+= dataGridView1_CellClick;
+			dataGridView1.CellDoubleClick+= dataGridView1_CellDoubleClick;
+			comboFilters.SelectedIndexChanged+= comboFilters_SelectedIndexChanged;
+			dataGridView1.DataError+= dataGridView1_DataError;
+			tbSearch.TextChanged+= tbSearch_TextChanged;
 			//folderBrowserDialog1.SelectedPath=@"\\175.16.1.1\e\Принятые Факсы";
+			filters=CONSTS.Filters;
+			
+		
 			#region Read config
 			
 			cfg=new IniFile(ConfigFile);
 			ReadFiltersCfg(cfg);
 			ReadSettings(cfg);
+			ReadFilesExceptions(cfg);
+			#endregion
+			dataGridView1.AllowUserToAddRows=false;
+			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.AddRange(CONSTS.DIRS());
+			#region	ComboFilters
+			comboFilters.Items.AddRange(namesFilters());
+			comboFilters.Items.Add("Все фильтры");
+			comboFilters.SelectedItem="Все фильтры";
+			
 			#endregion
 			if(IncomingDir!=null && Directory.Exists(IncomingDir))
-				DisplayFilesInDGV(IncomingDir);
+				ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
+			
 		}
+//ввод строки поиска-фильтрации
+		void tbSearch_TextChanged(object sender, EventArgs e)
+		{try
+			{
+			if(String.IsNullOrWhiteSpace(tbSearch.Text))//Show All
+			{
+				DisplayFilesInDGV(AllFiles.Files);
+			}
+			
+			string SrchString=tbSearch.Text.Trim().ToLower();
+			DisplayFilesInDGV(AllFiles.Files.Where(x=>x.FileName.ToLower().Contains(SrchString)));
 
+			}
+		
+		catch(Exception ex)
+		{MessageBox.Show(ex.Message);
+		}
+		}
 		private void DataGridView1_DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
 		{
+
+//			if(dataGridView1.Rows.Count>0)// && dataGridView1.Columns.Contains("DateEvent"))
+//			dataGridView1.Sort(dataGridView1.Columns[3],System.ComponentModel.ListSortDirection.Descending);
 			HighlightCheckedRows(dataGridView1);
+			
 		}
 
+		public void HighLightExceptions(UserDataGridView dg)
+		{string selectedFile="";
+			foreach (DataGridViewRow row in dg.Rows) {
+				selectedFile=IncomingDir+ row.Cells[1].Value.ToString();
+				if(CONSTS.FilesExceptions.Contains(selectedFile)) 
+					row.DefaultCellStyle.BackColor = Color.IndianRed;
+			}
+		}
+		void comboFilters_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			
+			string selectedFilterString=comboFilters.SelectedItem.ToString();
+			if(selectedFilterString=="Все фильтры") filters=CONSTS.Filters;
+			else {
+				filters=new List<CONSTS.Filter>();
+			foreach (CONSTS.Filter filter in CONSTS.Filters) {
+				if(filter.directory.TrimEnd('\\').Split('\\').Last()==selectedFilterString.Trim())
+					filters.Add(filter);
+				}
+			}
+			ReadAndDisplayFilesInDGV(IncomingDir,filters,checkBox1.Checked);
+			
+		}
+//open file
+		void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+		{
+			if(e.ColumnIndex!=1) return;
+			string selectedFile=dataGridView1.Rows[e.RowIndex].Cells[1].FormattedValue.ToString();
+			System.Diagnostics.Process.Start(IncomingDir+ selectedFile);
+		}
+		void dataGridView1_DataError(object sender, DataGridViewDataErrorEventArgs e)
+		{
+			
+		}
+		//Генерация названия для фильтров
+		public string[] namesFilters()
+		{List<string> names=new List<string>();
+			foreach (CONSTS.Filter filter in CONSTS.Filters) {
+				string targetDir=filter.directory.TrimEnd('\\').Split('\\').Last();
+				if(!names.Contains(targetDir)) names.Add(targetDir);
+			}
+			return names.ToArray();
+		}
 		void cellClick(object sender, DataGridViewCellEventArgs e)
 		{
-			if (e.ColumnIndex != 0) return;
+			if (e.ColumnIndex == 0) {
 
 				int total=0;
 				if(dataGridView1.Rows.Count!=0) total=dataGridView1.Rows.Count;
@@ -58,13 +141,32 @@ namespace SortFaxes
 			//HighlightCheckedRows(dataGridView1);
 			SetStatus(dataGridView1.CheckedCount,total);
 			//HighlightCheckedRows(dataGridView1);
+			}
+			
 		}
-		
+
+		void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+		{
+//			if(e.ColumnIndex==2) //comboBoxCell
+//			{
+//			List<string> dirs=new List<string>();
+//			foreach (CONSTS.Filter filter in CONSTS.Filters) {
+//				dirs.Add(filter.directory);
+//				
+//			}
+//			dirs.Add("");
+//			(dataGridView1.SelectedCells[2] as DataGridViewComboBoxCell).Items.Clear();
+//			(dataGridView1.SelectedCells[2] as DataGridViewComboBoxCell).Items.AddRange(dirs.ToArray());
+				//(row[2] as DataGridViewComboBoxCell
+			
+			//}
+		}
 		void formClosingMethod(object sender, FormClosingEventArgs e)
 		{
 			
 			SaveFiltersCFG(cfg);
 			SaveIncominDir(cfg);
+			SaveFileExceptions(cfg);
 		}
 
 		void ВыбратьИсходнуюПапкуToolStripMenuItemClick(object sender, EventArgs e)
@@ -72,9 +174,9 @@ namespace SortFaxes
 			var dr=folderBrowserDialog1.ShowDialog();
 			if(dr!=DialogResult.OK) return;
 			IncomingDir=folderBrowserDialog1.SelectedPath;
-			
+			CONSTS.SelectedPath=IncomingDir;
 			this.Text=IncomingDir;
-			DisplayFilesInDGV(IncomingDir);
+			ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
 		}
 		
 		// manage filters
@@ -82,7 +184,8 @@ namespace SortFaxes
 		{
 			FilterManager FM=new FilterManager();
 			FM.ShowDialog();
-			
+			filters=CONSTS.Filters;
+			SaveFiltersCFG(cfg);
 		}
 		
 		/// <summary>
@@ -96,11 +199,18 @@ namespace SortFaxes
 			if(keys.Length!=0)
 			{
 				foreach (string word in keys) 
-				{
+				{ //{"word"=dir} Слова фильтра записываются в конф файл в ковычках
 					var dir=cfg.ReadINI("filters",word);
 					if(String.IsNullOrWhiteSpace(dir)) continue;
-					if (CONSTS.Filter.ContainsKey(word)) continue;
-						CONSTS.Filter.Add(word, dir);
+					
+					
+					if(CONSTS.Filters.Count == 0 || CONSTS.Filters.All(x => x.directory != dir))
+						CONSTS.Filters.Add(new CONSTS.Filter(){
+						                   directory=dir,
+						                   priority=0,
+						                   words=new List<string>()});
+					if (CONSTS.Filters.Count!=0 && CONSTS.Filters.Find(x=>x.directory==dir).words.Contains(word.Trim('"'))) continue;
+					CONSTS.Filters.Find(x=>x.directory==dir).words.Add(word.Trim('"'));
 				}
 			}
 			
@@ -112,6 +222,28 @@ namespace SortFaxes
 			
 		}
 		
+		void ReadFilesExceptions(IniFile cfg)
+		{
+			try {
+			var keys=cfg.GetAllKeys("exceptions");
+			if(keys.Length!=0)
+			{
+				foreach (string filepath in keys) 
+				{
+					var excFile=cfg.ReadINI("exceptions",filepath);
+					if(String.IsNullOrWhiteSpace(excFile)) continue;
+					if(!File.Exists(excFile))continue;
+					if (!CONSTS.FilesExceptions.Contains(excFile)) 
+						CONSTS.FilesExceptions.Add(excFile);
+				}
+			}
+			
+			} catch (Exception ex) {
+				
+				MessageBox.Show(ex.Message, "read files exceptions");
+			}
+		}
+		
 		void ReadSettings(IniFile cfg)
 		{
 			if(cfg.KeyExists("SelectedDirectory"))
@@ -120,6 +252,7 @@ namespace SortFaxes
 				if(Directory.Exists(readIncDir)) 
 				{
 					IncomingDir=readIncDir;
+					CONSTS.SelectedPath=IncomingDir;
 					this.Text=IncomingDir;
 				}
 			}
@@ -130,31 +263,25 @@ namespace SortFaxes
 		/// <param name="cfg"></param>
 		public static void SaveFiltersCFG(IniFile cfg)
 		{
-			/*var groupsDir=CONSTS.Filter.Values.GroupBy(x=>x);
-			foreach (var gr in groupsDir) //группировка по папкам
-			{
-				string words="";
-				foreach (var val in gr) //для каждой папки список слов-фильтров
-				{
-					string dir=val.ToString();
-					var keyVals=CONSTS.Filter.Where(x=>x.Value==val);
-					string oldWords=cfg.ReadINI("filters",dir);
-					foreach (var key in keyVals.Select(x=>x.Key).Distinct()) {
-						if(!oldWords.Contains(key))
-						words+=key+";";
-					}
-					words=words.TrimEnd(';');
-					cfg.Write("filters",dir,words);
-				}
-			}*/
-
-			//new method of saving filter
-			//save pair word;dir
-			//word - is uniq
+			
 			cfg.DeleteSection("filters");
-			foreach (var pair in CONSTS.Filter)
+			foreach (CONSTS.Filter filter in CONSTS.Filters)
 			{
-				cfg.Write("filters", pair.Key, pair.Value);
+				foreach(string word in filter.words)
+				cfg.Write("filters", word, filter.directory);
+			}
+		}
+		void SaveFileExceptions(IniFile cfg)
+		{
+			try {cfg.DeleteSection("exceptions");
+						foreach (var excfile in CONSTS.FilesExceptions) 
+						{
+					if(!File.Exists(excfile)) continue;
+					
+					cfg.Write("exceptions",excfile.Split('\\').Last(),excfile);
+						}
+			} catch (Exception ex) {
+				MessageBox.Show(ex.Message, "Save files exceptions");
 			}
 		}
 		void SaveIncominDir (IniFile cfg)
@@ -167,24 +294,43 @@ namespace SortFaxes
 		/// and display it into datagridview1
 		/// </summary>
 		/// <param name="incDir"></param>
-		void DisplayFilesInDGV(string incDir)
+		void ReadAndDisplayFilesInDGV(string incDir, List<CONSTS.Filter> filters, bool HideUncheked)
 		{
+			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.Clear();
+			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.AddRange(CONSTS.DIRS());
 			var filepaths=Directory.GetFiles(incDir);
-			QueueFiles AllFiles=new QueueFiles(filepaths);//отфильтрованный список файлов
-			bindingSource1.DataSource=AllFiles.Files;
+			AllFiles=new QueueFiles(filepaths, filters, CONSTS.FilesExceptions);//отфильтрованный список файлов
+			AllFiles.Files.Sort(new QFileComparer());
+			if(HideUncheked)bindingSource1.DataSource=AllFiles.Files.Where(x=>x.Copy);
+			else bindingSource1.DataSource=AllFiles.Files;
 			dataGridView1.DataSource=bindingSource1;
 			SetStatus(AllFiles.Files.Count(x=>x.Copy), AllFiles.Files.Count());
 			
 		}
+		void DisplayFilesInDGV(IEnumerable<QFile> allFiles)
+		{
+			if(checkBox1.Checked)bindingSource1.DataSource=allFiles.Where(x=>x.Copy);
+			else bindingSource1.DataSource=allFiles;
+			dataGridView1.DataSource=bindingSource1;
+		}
 		public void HighlightCheckedRows(UserDataGridView dg)
 		{
+			if(dg.Rows.Count==0)return;
 			foreach (DataGridViewRow row in dg.Rows)
 			{
-				//var rowstyle = row.DefaultCellStyle;
-				//rowstyle.BackColor = Color.LightGreen;
+				if(row.Cells[1].Value==null) continue;
 				if ((bool)row.Cells[0].EditedFormattedValue)
 					row.DefaultCellStyle.BackColor = Color.LightGreen;
-				else row.DefaultCellStyle.BackColor = Color.White;
+				else {
+					string filepath=IncomingDir+ row.Cells[1].Value.ToString();
+					if(CONSTS.FilesExceptions.Contains(filepath))
+					row.DefaultCellStyle.BackColor=Color.IndianRed;
+					else
+					row.DefaultCellStyle.BackColor = Color.White;
+				}
+				
+				
+				
 				
 			}
 		}
@@ -204,16 +350,25 @@ namespace SortFaxes
 		void Button1Click(object sender, EventArgs e)
 		{
 	try {
+				CONSTS.invokeStatusInfo(statusStrip1, "Перемещение файлов...");
 			foreach (DataGridViewRow row in dataGridView1.Rows) {
 					if((bool)row.Cells[0].Value) //MOVE
 					{
 						if (String.IsNullOrWhiteSpace(row.Cells[2].Value.ToString())) continue;
 						button1.Enabled = false;
-						var SourceFile = IncomingDir+"\\"+ row.Cells[1].Value.ToString();
-						var TargetFile = row.Cells[2].Value.ToString()+ row.Cells[1].Value.ToString();
+						var SourceFile = IncomingDir+ row.Cells[1].Value.ToString();
+						var TargetFile = row.Cells[2].Value.ToString().TrimEnd('\\')+"\\"+ row.Cells[1].Value.ToString();
+						
 						Writelog.WriteLog(row.Cells[1].Value.ToString()+" перемещен --> "+row.Cells[2].Value,"history.txt");
-						if (File.Exists(SourceFile)) File.Move(SourceFile, TargetFile);
-						CONSTS.invokeStatusInfo(statusStrip1, "Переностся файл " + row.Cells[1].Value.ToString());
+						
+						if (File.Exists(SourceFile)) 
+						{
+							if(File.Exists(TargetFile)) //overwrite
+								File.Delete(TargetFile);								
+							
+								File.Move(SourceFile, TargetFile);
+						}
+						CONSTS.invokeStatusInfo(statusStrip1, "Переносится файл " + row.Cells[1].Value.ToString());
 						
 
 					}
@@ -223,7 +378,7 @@ namespace SortFaxes
 					}
 					
 			}
-				DisplayFilesInDGV(IncomingDir);
+				ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
 					button1.Enabled = true;
 				CONSTS.invokeStatusInfo(statusStrip1, "Выполнено");
 			} catch (Exception ex) {
@@ -235,7 +390,41 @@ namespace SortFaxes
 		void ПовторноПрименитьФильтрToolStripMenuItemClick(object sender, EventArgs e)
 		{
 			if(IncomingDir!=null && Directory.Exists(IncomingDir))
-			DisplayFilesInDGV(IncomingDir);
+			ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
 		}
+		void CheckBox1CheckedChanged(object sender, EventArgs e)
+		{
+			DisplayFilesInDGV(AllFiles.Files);
+		
+		}
+		void ДобавитьФайлВИсключениенеПеремещатьToolStripMenuItemClick(object sender, EventArgs e)
+		{
+	try {
+				string selectedFile="";
+				if(dataGridView1.SelectedCells.Count==0)return;
+				selectedFile=IncomingDir+ dataGridView1.SelectedRows[0].Cells[1].Value.ToString();
+				if(!CONSTS.FilesExceptions.Contains(selectedFile)) 
+				{
+					CONSTS.FilesExceptions.Add(selectedFile);
+					dataGridView1.SelectedRows[0].DefaultCellStyle.BackColor = Color.IndianRed;
+				}
+				
+				
+	} catch (Exception ex) {
+				MessageBox.Show(ex.Message);
+	}
+		}
+		void УдалитьФайлИзИсключенияToolStripMenuItemClick(object sender, EventArgs e)
+		{
+			string selectedFile="";
+				if(dataGridView1.SelectedCells.Count==0)return;
+				selectedFile=IncomingDir+ dataGridView1.SelectedRows[0].Cells[1].Value.ToString();
+				if(CONSTS.FilesExceptions.Contains(selectedFile)) 
+				{
+					CONSTS.FilesExceptions.Remove(selectedFile);
+					dataGridView1.SelectedRows[0].DefaultCellStyle.BackColor = Color.White;
+				}
+		}
+		
 	}
 }

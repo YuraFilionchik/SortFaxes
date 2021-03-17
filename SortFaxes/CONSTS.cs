@@ -18,6 +18,14 @@ namespace SortFaxes
 	/// </summary>
 	public static class CONSTS
 	{
+		//данные фильтра одной директории
+		public class Filter
+		{
+			public string directory;
+			public int priority;
+			public List<string> words;
+			
+		}
 		public static DateTime ParseDate(string str)
 		{
 			DateTime resDate=new DateTime(0);
@@ -52,22 +60,26 @@ namespace SortFaxes
 			
 		}
 		/// <summary>
-		/// {word, dir}
+		/// List of Filter{dir,prior,list words}
 		/// </summary>
-		public static Dictionary<string,string> Filter=new Dictionary<string, string>();
+		public static  List<Filter> Filters=new List<Filter>(); 
+		
+		public static List<string> FilesExceptions=new List<string>();
 		public static void RemoveDirFromfilter(string dir)
 		{
-			var keys = new List<string>();
-			foreach (var word in Filter.Keys)
-			{
-				if (Filter[word] == dir) keys.Add(word);
-			}
-			foreach (var word in keys)
-			{
-				 Filter.Remove(word);
-			}
+			var ind=Filters.FindIndex(x=>x.directory==dir);
+			if(ind>=0) Filters.Remove(Filters[ind]);
 		}
-
+		public static string[] DIRS()
+		{
+			List<string> dirs=new List<string>();
+			foreach (var filter in Filters) {
+				dirs.Add(filter.directory);
+			}
+			dirs.Add("");
+			return dirs.ToArray();
+		}
+		public static string SelectedPath="";
 		public static void invokeStatusInfo(StatusStrip stat, string text)
 		{
 			if (stat.InvokeRequired) stat.Invoke(new Action<string>(s => stat.Items[1].Text = s), text);

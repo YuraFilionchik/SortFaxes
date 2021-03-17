@@ -29,27 +29,39 @@ namespace SortFaxes
 			Files=new List<QFile>();
 		}
 		
-		public QueueFiles(IEnumerable<string> filepaths)
+		public QueueFiles(IEnumerable<string> filepaths,  List<CONSTS.Filter> filters, List<string> exceptions)
 		{
 			Files=new List<QFile>();
 			foreach (string path in filepaths) {
-				Files.Add(new QFile(path));
+				Files.Add(new QFile(path, filters, exceptions));
 			}
 		}
 		
 		
 	}
+	public class QFileComparer : IComparer<QFile>
+	{
+		#region IComparer implementation
+	public int Compare(QFile x, QFile y)
+	{
+		if(x.DateEvent>y.DateEvent) return -1;
+		else if(x.DateEvent<y.DateEvent) return 1;
+		else return 0;
+	}
+	#endregion
+	
+	}
 	/// <summary>
 	/// Файл и инфа, извлеченная из его имени
 	/// </summary>
-	public class QFile
+	public class QFile:IComparable<QFile>
 	{
 		public bool Copy{get;set;}
 		public string FileName{get;set;}
 		public string FilePath;
 		public string DestinationDir{get;set;}
 		public DateTime DateEvent{get;set;}
-		
+		 
 		public QFile()
 		{
 			FileName="";
@@ -58,14 +70,20 @@ namespace SortFaxes
 			DateEvent=new DateTime(0);
 			Copy=false;
 		}
-		
+
+		#region IComparable implementation
+		public int CompareTo(QFile f)
+		{
+			return this.DateEvent.CompareTo(f.DateEvent);
+		}
+		#endregion		
 		/// <summary>
 		/// 
 		/// </summary>
 		/// <param name="path">Full file path</param>
 		/// <param name="filter">{0} - filer word
 		/// {1} - target Dir</param>
-		public QFile(string path)
+		public QFile(string path,  List<CONSTS.Filter> filters, List<string> exceptions)
 		{
 			if(!File.Exists(path))
 			{
@@ -81,8 +99,10 @@ namespace SortFaxes
 			DateEvent=CONSTS.ParseDate(FileName);
 			if(DateEvent!=new DateTime(0) && DateEvent < DateTime.Today ) //DateEvent filter
 				Copy=true;
-			DestinationDir=Filter(FileName);
+			DestinationDir=Filter(FileName, filters);
 			if(String.IsNullOrWhiteSpace(DestinationDir)) Copy=false;
+			if(exceptions.Contains(FilePath))
+				Copy=false;
 
 		}
 		
@@ -92,12 +112,34 @@ namespace SortFaxes
 		/// </summary>
 		/// <param name="input"></param>
 		/// <returns></returns>
-		public string Filter(string input)
+		public string Filter(string input, List<CONSTS.Filter> filters)
 		{
 			//TODO сделать приоритеты фильтров
-			foreach (var dic in CONSTS.Filter) 
-				if(input.Contains(dic.Key)) return dic.Value;
+			foreach (CONSTS.Filter filter in filters)
+			{string[] words;
+				foreach (string wordString in filter.words) {
+					words=wordString.Split(';');
+					
+					if(containsAllWord(input.ToLower(),words))
+						return filter.directory;	
+				}		
+				
+			}
+				
 			return "";
+		}
+		
+		//проверяет есть ли в строке последовательность слов words
+		private bool containsAllWord(string input, string[] words)
+		{int pos=0;
+			foreach (string word in words) {
+				int find_pos=input.IndexOf(word.ToLower());
+				if(find_pos==-1) return false;
+				if(find_pos>=pos) pos=find_pos;
+					else return false;
+					
+			}
+			return true;
 		}
 	}
 }

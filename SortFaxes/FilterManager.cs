@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace SortFaxes
 {
@@ -24,14 +25,34 @@ namespace SortFaxes
 			// The InitializeComponent() call is required for Windows Forms designer support.
 			//
 			InitializeComponent();
-			lbDirs.Items.Clear();
-			foreach (var val in CONSTS.Filter.Values) {
-				if(lbDirs.Items.Contains(val)) continue;
-				lbDirs.Items.Add(val);
-			}
+			DisplayFilters();
 			lbDirs.SelectedIndexChanged+=  selectDir;
 			this.FormClosing+= managerFormClosing;
+			textBox2.KeyPress+= textBox2_KeyPress;
+			label3.Click+= label3_Click;
 			
+		}
+		
+		void DisplayFilters()
+	{
+		lbDirs.Items.Clear();
+			foreach (CONSTS.Filter filter in CONSTS.Filters) {
+				if(lbDirs.Items.Contains(filter.directory)) continue;
+				lbDirs.Items.Add(filter.directory);
+	}
+}
+
+		void label3_Click(object sender, EventArgs e)
+		{
+			string text="Правило срабатывает, если найдено одно из слов в списке фильтра. " +
+				"При добавлениии слов через ; (точку с запятой) правило сработает при наличии всех " +
+				"перечисленных слов в указанном порядке";
+			MessageBox.Show(text,"О словах-фильтрах", MessageBoxButtons.OK,MessageBoxIcon.Information);
+		}
+		void textBox2_KeyPress(object sender, KeyPressEventArgs e)
+		{
+			if(e.KeyChar==(char)13)
+				button2.PerformClick();
 		}
 
 		void managerFormClosing(object sender, EventArgs e)
@@ -43,10 +64,10 @@ namespace SortFaxes
 			if(lbDirs.SelectedItems.Count==0)return;
 			string selectedDir=lbDirs.SelectedItem.ToString();
 			lbWords.Items.Clear();
-			foreach (var dic in CONSTS.Filter) {
-				if(dic.Value==selectedDir && !lbWords.Items.Contains(dic.Key))
-					lbWords.Items.Add(dic.Key);
-			}
+			CONSTS.Filter selectedFilter=CONSTS.Filters.FirstOrDefault(x=>x.directory==selectedDir);
+			if(selectedFilter!=null)
+				lbWords.Items.AddRange(selectedFilter.words.ToArray());
+			
 		}
 		//add Directory
 		void Button1Click(object sender, EventArgs e)
@@ -55,7 +76,10 @@ namespace SortFaxes
 			if(Directory.Exists(textBox1.Text) && !lbDirs.Items.Contains(textBox1.Text))
 			{
 				lbDirs.Items.Add(textBox1.Text);
-				
+				CONSTS.Filters.Add(new CONSTS.Filter()
+				                   {directory=textBox1.Text.Trim(),
+				                   	priority=1,
+				                   	words=new List<string>()});
 				
 			}
 		}
@@ -67,14 +91,16 @@ namespace SortFaxes
 			if(string.IsNullOrWhiteSpace(word))return;
 			if(lbDirs.SelectedItems.Count==0) {MessageBox.Show("Сначала нужно выбрать папку"); return;}
 			string dir=lbDirs.SelectedItem.ToString();
-			if(word.Split(' ').Length>1) {MessageBox.Show("Одно слово без ПРОБЕЛОВ");return;}
+			//if(word.Split(' ').Length>1) {MessageBox.Show("Одно слово без ПРОБЕЛОВ");return;}
 			
-			if (CONSTS.Filter.ContainsKey(word)) MessageBox.Show("Такое слово уже присутствует в одной из папок");
+			if (CONSTS.Filters.Any(x=>x.words.Contains(word))) MessageBox.Show("Такой фильтр уже присутствует в одной из папок");
 			else
 			{
 				lbWords.Items.Add(word);
-				CONSTS.Filter.Add(word, dir);
-				textBox2.Text = "";
+				int ind=CONSTS.Filters.FindIndex(x=>x.directory==dir);
+				if(ind<0) return;
+				CONSTS.Filters[ind].words.Add(word);
+				//textBox2.Text = "";
 			}
 		}
 		
@@ -91,7 +117,8 @@ namespace SortFaxes
 				}else if(this.ActiveControl.Name=="lbWords")//delete word-filter
 				{
 					if(lbWords.SelectedItems.Count!=0)
-					CONSTS.Filter.Remove(lbWords.SelectedItem.ToString());
+						CONSTS.Filters.Find(x=>x.directory==lbDirs.SelectedItem.ToString()).
+							words.Remove(lbWords.SelectedItem.ToString());
 					lbWords.Items.Remove(lbWords.SelectedItem);
 				}
 					
@@ -100,6 +127,12 @@ namespace SortFaxes
 		
 				MessageBox.Show(ex.Message);
 	}
+		}
+		void BtBrowseClick(object sender, EventArgs e)
+		{
+			folderBrowserDialog1.SelectedPath=CONSTS.SelectedPath;
+		DialogResult dr=	folderBrowserDialog1.ShowDialog();
+		if (dr== DialogResult.OK) textBox1.Text=folderBrowserDialog1.SelectedPath;
 		}
 	}
 }

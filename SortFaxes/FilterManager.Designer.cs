@@ -24,6 +24,10 @@ namespace SortFaxes
 		private System.Windows.Forms.TextBox textBox2;
 		private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
 		private System.Windows.Forms.ToolStripMenuItem удалитьToolStripMenuItem;
+		private System.Windows.Forms.ToolTip toolTip1;
+		private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
+		private System.Windows.Forms.Button btBrowse;
+		private System.Windows.Forms.Label label3;
 		
 		/// <summary>
 		/// Disposes resources used by the form.
@@ -48,6 +52,8 @@ namespace SortFaxes
 		{
 			this.components = new System.ComponentModel.Container();
 			this.lbDirs = new System.Windows.Forms.ListBox();
+			this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+			this.удалитьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.lbWords = new System.Windows.Forms.ListBox();
 			this.label1 = new System.Windows.Forms.Label();
 			this.label2 = new System.Windows.Forms.Label();
@@ -55,8 +61,10 @@ namespace SortFaxes
 			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.button2 = new System.Windows.Forms.Button();
 			this.textBox2 = new System.Windows.Forms.TextBox();
-			this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-			this.удалитьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+			this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
+			this.btBrowse = new System.Windows.Forms.Button();
+			this.label3 = new System.Windows.Forms.Label();
 			this.contextMenuStrip1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -69,8 +77,22 @@ namespace SortFaxes
 			this.lbDirs.FormattingEnabled = true;
 			this.lbDirs.Location = new System.Drawing.Point(12, 25);
 			this.lbDirs.Name = "lbDirs";
-			this.lbDirs.Size = new System.Drawing.Size(306, 342);
+			this.lbDirs.Size = new System.Drawing.Size(316, 225);
 			this.lbDirs.TabIndex = 0;
+			// 
+			// contextMenuStrip1
+			// 
+			this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+			this.удалитьToolStripMenuItem});
+			this.contextMenuStrip1.Name = "contextMenuStrip1";
+			this.contextMenuStrip1.Size = new System.Drawing.Size(119, 26);
+			// 
+			// удалитьToolStripMenuItem
+			// 
+			this.удалитьToolStripMenuItem.Name = "удалитьToolStripMenuItem";
+			this.удалитьToolStripMenuItem.Size = new System.Drawing.Size(118, 22);
+			this.удалитьToolStripMenuItem.Text = "Удалить";
+			this.удалитьToolStripMenuItem.Click += new System.EventHandler(this.УдалитьToolStripMenuItemClick);
 			// 
 			// lbWords
 			// 
@@ -78,9 +100,9 @@ namespace SortFaxes
 			| System.Windows.Forms.AnchorStyles.Right)));
 			this.lbWords.ContextMenuStrip = this.contextMenuStrip1;
 			this.lbWords.FormattingEnabled = true;
-			this.lbWords.Location = new System.Drawing.Point(336, 25);
+			this.lbWords.Location = new System.Drawing.Point(346, 25);
 			this.lbWords.Name = "lbWords";
-			this.lbWords.Size = new System.Drawing.Size(201, 342);
+			this.lbWords.Size = new System.Drawing.Size(201, 225);
 			this.lbWords.TabIndex = 1;
 			// 
 			// label1
@@ -94,7 +116,7 @@ namespace SortFaxes
 			// label2
 			// 
 			this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.label2.Location = new System.Drawing.Point(336, 9);
+			this.label2.Location = new System.Drawing.Point(346, 9);
 			this.label2.Name = "label2";
 			this.label2.Size = new System.Drawing.Size(201, 13);
 			this.label2.TabIndex = 2;
@@ -102,9 +124,8 @@ namespace SortFaxes
 			// 
 			// button1
 			// 
-			this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
-			this.button1.Location = new System.Drawing.Point(12, 390);
+			this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.button1.Location = new System.Drawing.Point(12, 282);
 			this.button1.Name = "button1";
 			this.button1.Size = new System.Drawing.Size(222, 23);
 			this.button1.TabIndex = 3;
@@ -116,15 +137,15 @@ namespace SortFaxes
 			// 
 			this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
 			| System.Windows.Forms.AnchorStyles.Right)));
-			this.textBox1.Location = new System.Drawing.Point(13, 420);
+			this.textBox1.Location = new System.Drawing.Point(13, 312);
 			this.textBox1.Name = "textBox1";
-			this.textBox1.Size = new System.Drawing.Size(305, 20);
+			this.textBox1.Size = new System.Drawing.Size(315, 20);
 			this.textBox1.TabIndex = 4;
 			// 
 			// button2
 			// 
 			this.button2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.button2.Location = new System.Drawing.Point(336, 390);
+			this.button2.Location = new System.Drawing.Point(346, 282);
 			this.button2.Name = "button2";
 			this.button2.Size = new System.Drawing.Size(201, 23);
 			this.button2.TabIndex = 3;
@@ -135,30 +156,49 @@ namespace SortFaxes
 			// textBox2
 			// 
 			this.textBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.textBox2.Location = new System.Drawing.Point(336, 420);
+			this.textBox2.Location = new System.Drawing.Point(346, 312);
 			this.textBox2.Name = "textBox2";
-			this.textBox2.Size = new System.Drawing.Size(201, 20);
+			this.textBox2.Size = new System.Drawing.Size(182, 20);
 			this.textBox2.TabIndex = 5;
+			this.toolTip1.SetToolTip(this.textBox2, "Правило срабатывает, если найдено одно из слов в списке. \r\nПри вводе слов через ;" +
+		" правило сработает при наличии всех\r\n перечисленных слов в заданном порядке");
 			// 
-			// contextMenuStrip1
+			// toolTip1
 			// 
-			this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.удалитьToolStripMenuItem});
-			this.contextMenuStrip1.Name = "contextMenuStrip1";
-			this.contextMenuStrip1.Size = new System.Drawing.Size(153, 48);
+			this.toolTip1.ToolTipIcon = System.Windows.Forms.ToolTipIcon.Info;
 			// 
-			// удалитьToolStripMenuItem
+			// folderBrowserDialog1
 			// 
-			this.удалитьToolStripMenuItem.Name = "удалитьToolStripMenuItem";
-			this.удалитьToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-			this.удалитьToolStripMenuItem.Text = "Удалить";
-			this.удалитьToolStripMenuItem.Click += new System.EventHandler(this.УдалитьToolStripMenuItemClick);
+			this.folderBrowserDialog1.RootFolder = System.Environment.SpecialFolder.DesktopDirectory;
+			// 
+			// btBrowse
+			// 
+			this.btBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.btBrowse.Location = new System.Drawing.Point(249, 282);
+			this.btBrowse.Name = "btBrowse";
+			this.btBrowse.Size = new System.Drawing.Size(75, 23);
+			this.btBrowse.TabIndex = 6;
+			this.btBrowse.Text = "Обзор...";
+			this.btBrowse.UseVisualStyleBackColor = true;
+			this.btBrowse.Click += new System.EventHandler(this.BtBrowseClick);
+			// 
+			// label3
+			// 
+			this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.label3.Location = new System.Drawing.Point(534, 312);
+			this.label3.Name = "label3";
+			this.label3.Size = new System.Drawing.Size(13, 23);
+			this.label3.TabIndex = 7;
+			this.label3.Text = "?";
+			this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
 			// FilterManager
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(549, 451);
+			this.ClientSize = new System.Drawing.Size(559, 343);
+			this.Controls.Add(this.label3);
+			this.Controls.Add(this.btBrowse);
 			this.Controls.Add(this.textBox2);
 			this.Controls.Add(this.textBox1);
 			this.Controls.Add(this.button2);
@@ -167,6 +207,8 @@ namespace SortFaxes
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.lbWords);
 			this.Controls.Add(this.lbDirs);
+			this.MinimizeBox = false;
+			this.MinimumSize = new System.Drawing.Size(575, 381);
 			this.Name = "FilterManager";
 			this.Text = "FilterManager";
 			this.contextMenuStrip1.ResumeLayout(false);
