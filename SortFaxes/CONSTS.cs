@@ -85,5 +85,11 @@ namespace SortFaxes
 			if (stat.InvokeRequired) stat.Invoke(new Action<string>(s => stat.Items[1].Text = s), text);
 			else stat.Items[1].Text = text;
 		}
+
+		public static void InvokeLog(TextBox tb, string text)
+        {
+			if (tb.InvokeRequired) tb.Invoke(new Action<string>(s => tb.Text += s+Environment.NewLine), text);
+			else tb.Text+= text+Environment.NewLine;
+		}
 	}
 }

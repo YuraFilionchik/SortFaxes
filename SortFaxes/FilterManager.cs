@@ -19,7 +19,8 @@ namespace SortFaxes
 	/// </summary>
 	public partial class FilterManager : Form
 	{
-		public FilterManager()
+		public static bool UseML;
+		public FilterManager(bool useML)
 		{
 			//
 			// The InitializeComponent() call is required for Windows Forms designer support.
@@ -30,7 +31,8 @@ namespace SortFaxes
 			this.FormClosing+= managerFormClosing;
 			textBox2.KeyPress+= textBox2_KeyPress;
 			label3.Click+= label3_Click;
-			
+			checkBox1.Checked = useML;
+			UseML = useML;
 		}
 		
 		void DisplayFilters()
@@ -134,5 +136,30 @@ namespace SortFaxes
 		DialogResult dr=	folderBrowserDialog1.ShowDialog();
 		if (dr== DialogResult.OK) textBox1.Text=folderBrowserDialog1.SelectedPath;
 		}
-	}
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+			EnableControls(!checkBox1.Checked);
+			UseML = checkBox1.Checked;
+        }
+
+		private void EnableControls(bool state)
+        {
+			lbWords.Enabled = state;
+			button2.Enabled = state;
+			textBox2.Enabled = state;
+			btRebuild.Visible = state;
+		}
+
+        private void btRebuild_Click(object sender, EventArgs e)
+        {
+			btRebuild.Enabled = false;
+			var oldtext = btRebuild.Text;
+			btRebuild.Text = "Идет процесс обучения...";
+			var sortedDirs = CONSTS.Filters.ConvertAll(x => x.directory);
+			NeuroSorterLibrary.BuilderModel.BuildModel(sortedDirs, MainForm.IncomingDir,NeuroSorterLibrary.BuilderModel.MyTrainerStrategy.OVAAveragedPerceptronTrainer,true);
+			btRebuild.Enabled = true;
+			btRebuild.Text = oldtext;
+		}
+    }
 }

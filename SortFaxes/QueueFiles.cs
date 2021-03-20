@@ -15,8 +15,11 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using NeuroSorterLibrary;
+
 namespace SortFaxes
 {
+	public delegate void QEventHandler(string msg);
 	/// <summary>
 	/// Представляет объект со списком файлов для копирования (QFiles)
 	/// {Files} - отфильтрованный списов файлов
@@ -24,20 +27,68 @@ namespace SortFaxes
 	public class QueueFiles
 	{
 		public List<QFile> Files;
+		public Sorter NSorter;
+		public string ModelLocation=BuilderModel.GetModelPath();
+		public static event QEventHandler QueueEvent;
 		public QueueFiles()
 		{
 			Files=new List<QFile>();
 		}
 		
-		public QueueFiles(IEnumerable<string> filepaths,  List<CONSTS.Filter> filters, List<string> exceptions)
+		public QueueFiles(IEnumerable<string> filepaths,  List<CONSTS.Filter> filters, List<string> exceptions, bool rebuildModel)
 		{
+            try
+            {
 			Files=new List<QFile>();
-			foreach (string path in filepaths) {
-				Files.Add(new QFile(path, filters, exceptions));
-			}
+			if(rebuildModel || !File.Exists(ModelLocation)) //обучаем модель заново
+            {
+					QueueEvent("Обучение нейросети...");
+					var datasetpath = BuilderModel.GetDataSetPath();
+				var sortedDirs = filters.ConvertAll(x => x.directory);
+				BuilderModel.BuildModel(sortedDirs, filepaths, BuilderModel.MyTrainerStrategy.OVAAveragedPerceptronTrainer, true);
+					QueueEvent("Обучение окончено.");
+					QueueEvent(BuilderModel.Errors.Message);
+				}
+				if (!File.Exists(ModelLocation)) throw new Exception("Ошибка при обучении сортировщика. Модель не создана");
+			 NSorter = new Sorter(ModelLocation);
+			var sortedFiles = NSorter.PredictAll(filepaths);
+			var parentDir = Path.GetDirectoryName(filepaths.First());
+			foreach (var sortedfile in sortedFiles) {
+				Files.Add(new QFile(Path.Combine(parentDir,sortedfile.FileName), sortedfile.Label, exceptions));
+			} 
+
+            }
+            catch (Exception ex)
+            {
+				QueueEvent(ex.Message);
+				QueueEvent(BuilderModel.Errors.Message);
+
+				//MessageBox.Show("QueueFiles", ex.Message);
+            }
+			
 		}
-		
-		
+		public QueueFiles(IEnumerable<string> filepaths, List<CONSTS.Filter> filters, List<string> exceptions)
+		{
+			try
+			{
+				Files = new List<QFile>();
+				
+				foreach (var file in filepaths)
+				{
+					Files.Add(new QFile(file,filters, exceptions));
+				}
+
+			}
+			catch (Exception ex)
+			{
+				QueueEvent(ex.Message);
+				QueueEvent(BuilderModel.Errors.Message);
+
+				//MessageBox.Show("QueueFiles", ex.Message);
+			}
+
+		}
+
 	}
 	public class QFileComparer : IComparer<QFile>
 	{
@@ -105,8 +156,32 @@ namespace SortFaxes
 				Copy=false;
 
 		}
-		
-		
+		public QFile(string path, string dest, List<string> exceptions)
+		{
+			if (!File.Exists(path))
+			{
+				FileName = "";
+				FilePath = "";
+				DestinationDir = "";
+				DateEvent = new DateTime(0);
+				Copy = false;
+			}
+
+			FilePath = path;
+			FileName = path.Split('\\').Last();
+			Copy = false;
+			DateEvent = CONSTS.ParseDate(FileName);
+			if (DateEvent != new DateTime(0) && DateEvent < DateTime.Today) //DateEvent filter
+				Copy = true;
+			if (Directory.Exists(dest)) DestinationDir = dest; else DestinationDir = "";
+			if (String.IsNullOrWhiteSpace(DestinationDir)) Copy = false;
+			if (exceptions.Contains(FilePath))
+				Copy = false;
+
+		}
+
+
+
 		/// <summary>
 		/// Фильтрация имени файла по словам из CONSTS.Filter
 		/// </summary>

@@ -21,15 +21,18 @@ namespace SortFaxes
 	/// </summary>
 	public partial class MainForm : Form
 	{
-		public string IncomingDir;
+		public static string IncomingDir;
 		public string ConfigFile="cfg.ini";
 		public IniFile cfg;
 		public List<CONSTS.Filter> filters;
 		public QueueFiles AllFiles;
+		private bool UseML = false;
 		public MainForm()
 		{
 
 			InitializeComponent();
+			if (!Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Data"))) 
+				Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "Data"));
 			this.FormClosing+=formClosingMethod;
 			dataGridView1.DataBindingComplete += DataGridView1_DataBindingComplete;
 			dataGridView1.CellContentClick += cellClick;
@@ -40,7 +43,7 @@ namespace SortFaxes
 			tbSearch.TextChanged+= tbSearch_TextChanged;
 			//folderBrowserDialog1.SelectedPath=@"\\175.16.1.1\e\Принятые Факсы";
 			filters=CONSTS.Filters;
-			
+            QueueFiles.QueueEvent += QueueFiles_QueueEvent;
 		
 			#region Read config
 			
@@ -48,6 +51,7 @@ namespace SortFaxes
 			ReadFiltersCfg(cfg);
 			ReadSettings(cfg);
 			ReadFilesExceptions(cfg);
+			tsMenuUseML.Checked = UseML;
 			#endregion
 			dataGridView1.AllowUserToAddRows=false;
 			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.AddRange(CONSTS.DIRS());
@@ -57,12 +61,18 @@ namespace SortFaxes
 			comboFilters.SelectedItem="Все фильтры";
 			
 			#endregion
-			if(IncomingDir!=null && Directory.Exists(IncomingDir))
-				ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
+			//if(IncomingDir!=null && Directory.Exists(IncomingDir))
+			//	ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked, false);
 			
 		}
-//ввод строки поиска-фильтрации
-		void tbSearch_TextChanged(object sender, EventArgs e)
+
+        private void QueueFiles_QueueEvent(string msg)
+        {
+			CONSTS.InvokeLog(tbLog, msg);
+        }
+
+        //ввод строки поиска-фильтрации
+        void tbSearch_TextChanged(object sender, EventArgs e)
 		{try
 			{
 			if(String.IsNullOrWhiteSpace(tbSearch.Text))//Show All
@@ -108,7 +118,7 @@ namespace SortFaxes
 					filters.Add(filter);
 				}
 			}
-			ReadAndDisplayFilesInDGV(IncomingDir,filters,checkBox1.Checked);
+			ReadAndDisplayFilesInDGV(IncomingDir,filters,checkBox1.Checked,false);
 			
 		}
 //open file
@@ -116,7 +126,7 @@ namespace SortFaxes
 		{
 			if(e.ColumnIndex!=1) return;
 			string selectedFile=dataGridView1.Rows[e.RowIndex].Cells[1].FormattedValue.ToString();
-			System.Diagnostics.Process.Start(IncomingDir+ selectedFile);
+			System.Diagnostics.Process.Start(IncomingDir+"\\"+ selectedFile);
 		}
 		void dataGridView1_DataError(object sender, DataGridViewDataErrorEventArgs e)
 		{
@@ -165,7 +175,7 @@ namespace SortFaxes
 		{
 			
 			SaveFiltersCFG(cfg);
-			SaveIncominDir(cfg);
+			SaveSettings(cfg);
 			SaveFileExceptions(cfg);
 		}
 
@@ -176,14 +186,16 @@ namespace SortFaxes
 			IncomingDir=folderBrowserDialog1.SelectedPath;
 			CONSTS.SelectedPath=IncomingDir;
 			this.Text=IncomingDir;
-			ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
+			ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked,false);
 		}
 		
 		// manage filters
 		void ФильтрыToolStripMenuItemClick(object sender, EventArgs e)
 		{
-			FilterManager FM=new FilterManager();
+			FilterManager FM=new FilterManager(UseML);
 			FM.ShowDialog();
+			UseML = FilterManager.UseML;
+			tsMenuUseML.Checked = UseML;
 			filters=CONSTS.Filters;
 			SaveFiltersCFG(cfg);
 		}
@@ -196,8 +208,8 @@ namespace SortFaxes
 		{
 			try {
 			var keys=cfg.GetAllKeys("filters");
-			if(keys.Length!=0)
-			{
+			if(keys.Length!=0 && !(keys.Length==1 && string.IsNullOrWhiteSpace(keys[0])))
+			{ 
 				foreach (string word in keys) 
 				{ //{"word"=dir} Слова фильтра записываются в конф файл в ковычках
 					var dir=cfg.ReadINI("filters",word);
@@ -212,7 +224,20 @@ namespace SortFaxes
 					if (CONSTS.Filters.Count!=0 && CONSTS.Filters.Find(x=>x.directory==dir).words.Contains(word.Trim('"'))) continue;
 					CONSTS.Filters.Find(x=>x.directory==dir).words.Add(word.Trim('"'));
 				}
-			}
+			}else
+                {
+					var dirs = cfg.GetAllKeys("TargetDirs");
+                    foreach (var dir in dirs)
+                    {
+						if (CONSTS.Filters.Count == 0 || CONSTS.Filters.All(x => x.directory != dir))
+							CONSTS.Filters.Add(new CONSTS.Filter()
+							{
+								directory = dir,
+								priority = 0,
+								words = new List<string>()
+							});
+					}
+                }
 			
 			} catch (Exception ex) {
 				
@@ -255,7 +280,10 @@ namespace SortFaxes
 					CONSTS.SelectedPath=IncomingDir;
 					this.Text=IncomingDir;
 				}
+				string useml = cfg.ReadINI("SETTINGS", "UseML");
+				bool.TryParse(useml, out UseML);
 			}
+			
 		}
 		/// <summary>
 		/// Сохранение слов-фильтров в файл конфигурации
@@ -267,6 +295,7 @@ namespace SortFaxes
 			cfg.DeleteSection("filters");
 			foreach (CONSTS.Filter filter in CONSTS.Filters)
 			{
+				cfg.Write("TargetDirs",filter.directory,"");
 				foreach(string word in filter.words)
 				cfg.Write("filters", word, filter.directory);
 			}
@@ -284,28 +313,32 @@ namespace SortFaxes
 				MessageBox.Show(ex.Message, "Save files exceptions");
 			}
 		}
-		void SaveIncominDir (IniFile cfg)
+		void SaveSettings (IniFile cfg)
 		{
 			if(IncomingDir!=null && !String.IsNullOrWhiteSpace(IncomingDir))
 				cfg.Write("SETTINGS","SelectedDirectory",IncomingDir);
+			cfg.Write("SETTINGS", "UseML", UseML.ToString());
 		}
 		/// <summary>
 		/// Read and filtering files from incDir directory
 		/// and display it into datagridview1
 		/// </summary>
 		/// <param name="incDir"></param>
-		void ReadAndDisplayFilesInDGV(string incDir, List<CONSTS.Filter> filters, bool HideUncheked)
+		void ReadAndDisplayFilesInDGV(string incDir, List<CONSTS.Filter> filters, bool HideUncheked, bool rebuildModel)
 		{
+			if (!Directory.Exists(incDir)) return;
 			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.Clear();
 			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.AddRange(CONSTS.DIRS());
 			var filepaths=Directory.GetFiles(incDir);
-			AllFiles=new QueueFiles(filepaths, filters, CONSTS.FilesExceptions);//отфильтрованный список файлов
+			if(UseML)
+				AllFiles=new QueueFiles(filepaths, filters, CONSTS.FilesExceptions, rebuildModel);//отфильтрованный список файлов
+			else
+				AllFiles = new QueueFiles(filepaths, filters, CONSTS.FilesExceptions);//отфильтрованный список файлов
 			AllFiles.Files.Sort(new QFileComparer());
 			if(HideUncheked)bindingSource1.DataSource=AllFiles.Files.Where(x=>x.Copy);
 			else bindingSource1.DataSource=AllFiles.Files;
 			dataGridView1.DataSource=bindingSource1;
 			SetStatus(AllFiles.Files.Count(x=>x.Copy), AllFiles.Files.Count());
-			
 		}
 		void DisplayFilesInDGV(IEnumerable<QFile> allFiles)
 		{
@@ -349,14 +382,16 @@ namespace SortFaxes
 		//Переместить выбранные файлы
 		void Button1Click(object sender, EventArgs e)
 		{
-	try {
+			var oldtext = button1.Text;
+			try {
+				button1.Text = "Файлы перемещаются...";
 				CONSTS.invokeStatusInfo(statusStrip1, "Перемещение файлов...");
-			foreach (DataGridViewRow row in dataGridView1.Rows) {
+				foreach (DataGridViewRow row in dataGridView1.Rows) {
 					if((bool)row.Cells[0].Value) //MOVE
 					{
 						if (String.IsNullOrWhiteSpace(row.Cells[2].Value.ToString())) continue;
 						button1.Enabled = false;
-						var SourceFile = IncomingDir+ row.Cells[1].Value.ToString();
+						var SourceFile = IncomingDir+"\\" +row.Cells[1].Value.ToString();
 						var TargetFile = row.Cells[2].Value.ToString().TrimEnd('\\')+"\\"+ row.Cells[1].Value.ToString();
 						
 						Writelog.WriteLog(row.Cells[1].Value.ToString()+" перемещен --> "+row.Cells[2].Value,"history.txt");
@@ -378,11 +413,13 @@ namespace SortFaxes
 					}
 					
 			}
-				ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
-					button1.Enabled = true;
+				ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked,false);
+				button1.Enabled = true;
+				button1.Text = oldtext;
 				CONSTS.invokeStatusInfo(statusStrip1, "Выполнено");
 			} catch (Exception ex) {
 				button1.Enabled = true;
+				button1.Text = oldtext;
 				MessageBox.Show(ex.Message);
 				CONSTS.invokeStatusInfo(statusStrip1, "Ошибка в процессе перемещения файла");
 			}
@@ -390,7 +427,7 @@ namespace SortFaxes
 		void ПовторноПрименитьФильтрToolStripMenuItemClick(object sender, EventArgs e)
 		{
 			if(IncomingDir!=null && Directory.Exists(IncomingDir))
-			ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked);
+			ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked,false);
 		}
 		void CheckBox1CheckedChanged(object sender, EventArgs e)
 		{
@@ -425,6 +462,10 @@ namespace SortFaxes
 					dataGridView1.SelectedRows[0].DefaultCellStyle.BackColor = Color.White;
 				}
 		}
-		
-	}
+
+        private void tsMenuUseML_Click(object sender, EventArgs e)
+        {
+			UseML = tsMenuUseML.Checked;
+        }
+    }
 }
