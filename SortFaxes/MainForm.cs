@@ -27,6 +27,8 @@ namespace SortFaxes
 		public List<CONSTS.Filter> filters;
 		public QueueFiles AllFiles;
 		private bool UseML = false;
+		private bool UseFilter = true;
+		private int MinScore;  //minimal level of prediction
 		public MainForm()
 		{
 
@@ -41,7 +43,6 @@ namespace SortFaxes
 			comboFilters.SelectedIndexChanged+= comboFilters_SelectedIndexChanged;
 			dataGridView1.DataError+= dataGridView1_DataError;
 			tbSearch.TextChanged+= tbSearch_TextChanged;
-			//folderBrowserDialog1.SelectedPath=@"\\175.16.1.1\e\Принятые Факсы";
 			filters=CONSTS.Filters;
             QueueFiles.QueueEvent += QueueFiles_QueueEvent;
 		
@@ -61,8 +62,8 @@ namespace SortFaxes
 			comboFilters.SelectedItem="Все фильтры";
 			
 			#endregion
-			//if(IncomingDir!=null && Directory.Exists(IncomingDir))
-			//	ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked, false);
+			if(IncomingDir!=null && Directory.Exists(IncomingDir))
+				ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked, false);
 			
 		}
 
@@ -106,19 +107,17 @@ namespace SortFaxes
 					row.DefaultCellStyle.BackColor = Color.IndianRed;
 			}
 		}
+
+		//Select quick filters
 		void comboFilters_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			
+			if (AllFiles == null || AllFiles.Files == null) return;
 			string selectedFilterString=comboFilters.SelectedItem.ToString();
-			if(selectedFilterString=="Все фильтры") filters=CONSTS.Filters;
-			else {
-				filters=new List<CONSTS.Filter>();
-			foreach (CONSTS.Filter filter in CONSTS.Filters) {
-				if(filter.directory.TrimEnd('\\').Split('\\').Last()==selectedFilterString.Trim())
-					filters.Add(filter);
-				}
-			}
-			ReadAndDisplayFilesInDGV(IncomingDir,filters,checkBox1.Checked,false);
+			if(selectedFilterString=="Все фильтры")
+				DisplayFilesInDGV(AllFiles.Files);
+			else
+			DisplayFilesInDGV(AllFiles.Files.Where(x => x.DestinationDir.Contains(selectedFilterString)));
+			//ReadAndDisplayFilesInDGV(IncomingDir,filters,checkBox1.Checked,false);
 			
 		}
 //open file
@@ -192,10 +191,12 @@ namespace SortFaxes
 		// manage filters
 		void ФильтрыToolStripMenuItemClick(object sender, EventArgs e)
 		{
-			FilterManager FM=new FilterManager(UseML);
+			FilterManager FM=new FilterManager(UseML,UseFilter,MinScore);
 			FM.ShowDialog();
 			UseML = FilterManager.UseML;
 			tsMenuUseML.Checked = UseML;
+			MinScore = FilterManager.MinScore;
+			UseFilter = FilterManager.UseFilter;
 			filters=CONSTS.Filters;
 			SaveFiltersCFG(cfg);
 		}
@@ -282,6 +283,12 @@ namespace SortFaxes
 				}
 				string useml = cfg.ReadINI("SETTINGS", "UseML");
 				bool.TryParse(useml, out UseML);
+
+				string useFilter = cfg.ReadINI("SETTINGS", "UseFilter");
+				bool.TryParse(useFilter, out UseFilter);
+
+				string minscore = cfg.ReadINI("SETTINGS", "MinScore");
+				int.TryParse(minscore, out MinScore);
 			}
 			
 		}
@@ -318,6 +325,8 @@ namespace SortFaxes
 			if(IncomingDir!=null && !String.IsNullOrWhiteSpace(IncomingDir))
 				cfg.Write("SETTINGS","SelectedDirectory",IncomingDir);
 			cfg.Write("SETTINGS", "UseML", UseML.ToString());
+			cfg.Write("SETTINGS", "UseFilter", UseFilter.ToString());
+			cfg.Write("SETTINGS", "MinScore", MinScore.ToString());
 		}
 		/// <summary>
 		/// Read and filtering files from incDir directory
@@ -330,10 +339,21 @@ namespace SortFaxes
 			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.Clear();
 			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.AddRange(CONSTS.DIRS());
 			var filepaths=Directory.GetFiles(incDir);
-			if(UseML)
-				AllFiles=new QueueFiles(filepaths, filters, CONSTS.FilesExceptions, rebuildModel);//отфильтрованный список файлов
-			else
+			if(UseFilter)
+            {
 				AllFiles = new QueueFiles(filepaths, filters, CONSTS.FilesExceptions);//отфильтрованный список файлов
+				if(UseML)
+                {
+					var predictedFiles=  new QueueFiles(filepaths, filters, CONSTS.FilesExceptions, rebuildModel, MinScore);//отфильтрованный список файлов
+                    for (int i = 0; i < AllFiles.Files.Count; i++) //для всех нераспознанных файлов применяем результаты нейросети
+                    {
+						if (String.IsNullOrWhiteSpace(AllFiles.Files[i].DestinationDir))
+							AllFiles.Files[i] = predictedFiles.Files.First(x => x.FileName == AllFiles.Files[i].FileName);
+                    }
+				}
+            }else if(UseML)
+				AllFiles=new QueueFiles(filepaths, filters, CONSTS.FilesExceptions, rebuildModel,MinScore);//отфильтрованный список файлов
+			
 			AllFiles.Files.Sort(new QFileComparer());
 			if(HideUncheked)bindingSource1.DataSource=AllFiles.Files.Where(x=>x.Copy);
 			else bindingSource1.DataSource=AllFiles.Files;
@@ -431,6 +451,7 @@ namespace SortFaxes
 		}
 		void CheckBox1CheckedChanged(object sender, EventArgs e)
 		{
+			if (AllFiles == null || AllFiles.Files == null) return;
 			DisplayFilesInDGV(AllFiles.Files);
 		
 		}
@@ -466,6 +487,35 @@ namespace SortFaxes
         private void tsMenuUseML_Click(object sender, EventArgs e)
         {
 			UseML = tsMenuUseML.Checked;
+        }
+
+        private void отметитьВсеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            for(int i=0;i<dataGridView1.Rows.Count;i++)
+            {
+				dataGridView1.Rows[i].Cells[0].Value = true;
+            }
+        }
+
+        private void снятьВсеОтметкиToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+			for (int i = 0; i < dataGridView1.Rows.Count; i++)
+			{
+				dataGridView1.Rows[i].Cells[0].Value = false;
+			}
+		}
+
+        private void отметитьВыбранныеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (DataGridViewRow row in dataGridView1.SelectedRows)
+            {
+				dataGridView1.Rows[row.Index].Cells[0].Value = !(bool)dataGridView1.Rows[row.Index].Cells[0].Value;
+			}
+        }
+
+        private void comboFilters_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

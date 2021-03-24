@@ -22,10 +22,6 @@ namespace SortFaxes
 		private System.Windows.Forms.Button button1;
 		private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
 		private System.Windows.Forms.BindingSource bindingSource1;
-		private System.Windows.Forms.DataGridViewCheckBoxColumn copyDataGridViewCheckBoxColumn;
-		private System.Windows.Forms.DataGridViewTextBoxColumn fileNameDataGridViewTextBoxColumn;
-		private System.Windows.Forms.DataGridViewComboBoxColumn destinationDirDataGridViewTextBoxColumn;
-		private System.Windows.Forms.DataGridViewTextBoxColumn dateEventDataGridViewTextBoxColumn;
 		private System.Windows.Forms.ToolStripMenuItem повторноПрименитьФильтрToolStripMenuItem;
 		private System.Windows.Forms.StatusStrip statusStrip1;
 		private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
@@ -76,15 +72,19 @@ namespace SortFaxes
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.добавитьФайлВИсключениенеПеремещатьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.удалитьФайлИзИсключенияToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.отметитьВыбранныеToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.отметитьВсеToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.снятьВсеОтметкиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.bindingSource2 = new System.Windows.Forms.BindingSource(this.components);
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.tbLog = new System.Windows.Forms.TextBox();
             this.dataGridView1 = new SortFaxes.UserDataGridView();
+            this.bindingSource1 = new System.Windows.Forms.BindingSource(this.components);
             this.copyDataGridViewCheckBoxColumn = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.fileNameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.destinationDirDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.Score = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dateEventDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.bindingSource1 = new System.Windows.Forms.BindingSource(this.components);
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
@@ -152,10 +152,11 @@ namespace SortFaxes
             // 
             this.comboFilters.Name = "comboFilters";
             this.comboFilters.Size = new System.Drawing.Size(121, 23);
+            this.comboFilters.Click += new System.EventHandler(this.comboFilters_Click);
             // 
             // tbSearch
             // 
-            this.tbSearch.BackColor = System.Drawing.SystemColors.Info;
+            this.tbSearch.BackColor = System.Drawing.Color.Khaki;
             this.tbSearch.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.tbSearch.ForeColor = System.Drawing.Color.Crimson;
             this.tbSearch.Name = "tbSearch";
@@ -217,9 +218,12 @@ namespace SortFaxes
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.добавитьФайлВИсключениенеПеремещатьToolStripMenuItem,
-            this.удалитьФайлИзИсключенияToolStripMenuItem});
+            this.удалитьФайлИзИсключенияToolStripMenuItem,
+            this.отметитьВыбранныеToolStripMenuItem,
+            this.отметитьВсеToolStripMenuItem,
+            this.снятьВсеОтметкиToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(336, 48);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(336, 114);
             // 
             // добавитьФайлВИсключениенеПеремещатьToolStripMenuItem
             // 
@@ -234,6 +238,30 @@ namespace SortFaxes
             this.удалитьФайлИзИсключенияToolStripMenuItem.Size = new System.Drawing.Size(335, 22);
             this.удалитьФайлИзИсключенияToolStripMenuItem.Text = "Удалить файл из исключения";
             this.удалитьФайлИзИсключенияToolStripMenuItem.Click += new System.EventHandler(this.УдалитьФайлИзИсключенияToolStripMenuItemClick);
+            // 
+            // отметитьВыбранныеToolStripMenuItem
+            // 
+            this.отметитьВыбранныеToolStripMenuItem.BackColor = System.Drawing.Color.MediumAquamarine;
+            this.отметитьВыбранныеToolStripMenuItem.Name = "отметитьВыбранныеToolStripMenuItem";
+            this.отметитьВыбранныеToolStripMenuItem.Size = new System.Drawing.Size(335, 22);
+            this.отметитьВыбранныеToolStripMenuItem.Text = "Отметить выбранные";
+            this.отметитьВыбранныеToolStripMenuItem.Click += new System.EventHandler(this.отметитьВыбранныеToolStripMenuItem_Click);
+            // 
+            // отметитьВсеToolStripMenuItem
+            // 
+            this.отметитьВсеToolStripMenuItem.BackColor = System.Drawing.SystemColors.GradientActiveCaption;
+            this.отметитьВсеToolStripMenuItem.Name = "отметитьВсеToolStripMenuItem";
+            this.отметитьВсеToolStripMenuItem.Size = new System.Drawing.Size(335, 22);
+            this.отметитьВсеToolStripMenuItem.Text = "Отметить все";
+            this.отметитьВсеToolStripMenuItem.Click += new System.EventHandler(this.отметитьВсеToolStripMenuItem_Click);
+            // 
+            // снятьВсеОтметкиToolStripMenuItem
+            // 
+            this.снятьВсеОтметкиToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLight;
+            this.снятьВсеОтметкиToolStripMenuItem.Name = "снятьВсеОтметкиToolStripMenuItem";
+            this.снятьВсеОтметкиToolStripMenuItem.Size = new System.Drawing.Size(335, 22);
+            this.снятьВсеОтметкиToolStripMenuItem.Text = "Снять все отметки";
+            this.снятьВсеОтметкиToolStripMenuItem.Click += new System.EventHandler(this.снятьВсеОтметкиToolStripMenuItem_Click);
             // 
             // checkBox1
             // 
@@ -275,6 +303,7 @@ namespace SortFaxes
             this.copyDataGridViewCheckBoxColumn,
             this.fileNameDataGridViewTextBoxColumn,
             this.destinationDirDataGridViewTextBoxColumn,
+            this.Score,
             this.dateEventDataGridViewTextBoxColumn});
             this.dataGridView1.ContextMenuStrip = this.contextMenuStrip1;
             this.dataGridView1.DataSource = this.bindingSource1;
@@ -288,6 +317,11 @@ namespace SortFaxes
             this.dataGridView1.ShowRowErrors = false;
             this.dataGridView1.Size = new System.Drawing.Size(1193, 652);
             this.dataGridView1.TabIndex = 3;
+            // 
+            // bindingSource1
+            // 
+            this.bindingSource1.AllowNew = false;
+            this.bindingSource1.DataSource = typeof(SortFaxes.QFile);
             // 
             // copyDataGridViewCheckBoxColumn
             // 
@@ -317,17 +351,21 @@ namespace SortFaxes
             this.destinationDirDataGridViewTextBoxColumn.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
             this.destinationDirDataGridViewTextBoxColumn.Width = 56;
             // 
+            // Score
+            // 
+            this.Score.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.Score.DataPropertyName = "Score";
+            this.Score.HeaderText = "%";
+            this.Score.Name = "Score";
+            this.Score.ToolTipText = "Вероятность угадывания папки для файла";
+            this.Score.Width = 40;
+            // 
             // dateEventDataGridViewTextBoxColumn
             // 
             this.dateEventDataGridViewTextBoxColumn.DataPropertyName = "DateEvent";
             this.dateEventDataGridViewTextBoxColumn.HeaderText = "Дата события";
             this.dateEventDataGridViewTextBoxColumn.Name = "dateEventDataGridViewTextBoxColumn";
             this.dateEventDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // bindingSource1
-            // 
-            this.bindingSource1.AllowNew = false;
-            this.bindingSource1.DataSource = typeof(SortFaxes.QFile);
             // 
             // MainForm
             // 
@@ -359,6 +397,14 @@ namespace SortFaxes
 
         private System.Windows.Forms.TextBox tbLog;
         private System.Windows.Forms.ToolStripMenuItem tsMenuUseML;
+        private System.Windows.Forms.ToolStripMenuItem отметитьВсеToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem снятьВсеОтметкиToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem отметитьВыбранныеToolStripMenuItem;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn copyDataGridViewCheckBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn fileNameDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewComboBoxColumn destinationDirDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Score;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dateEventDataGridViewTextBoxColumn;
     }
 
 

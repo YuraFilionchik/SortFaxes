@@ -30,12 +30,13 @@ namespace SortFaxes
 		public Sorter NSorter;
 		public string ModelLocation=BuilderModel.GetModelPath();
 		public static event QEventHandler QueueEvent;
+		
 		public QueueFiles()
 		{
 			Files=new List<QFile>();
 		}
 		
-		public QueueFiles(IEnumerable<string> filepaths,  List<CONSTS.Filter> filters, List<string> exceptions, bool rebuildModel)
+		public QueueFiles(IEnumerable<string> filepaths,  List<CONSTS.Filter> filters, List<string> exceptions, bool rebuildModel, int minScore)
 		{
             try
             {
@@ -54,8 +55,11 @@ namespace SortFaxes
 			var sortedFiles = NSorter.PredictAll(filepaths);
 			var parentDir = Path.GetDirectoryName(filepaths.First());
 			foreach (var sortedfile in sortedFiles) {
-				Files.Add(new QFile(Path.Combine(parentDir,sortedfile.FileName), sortedfile.Label, exceptions));
-			} 
+				if(sortedfile.Score*100>=(float)(minScore))
+						Files.Add(new QFile(Path.Combine(parentDir,sortedfile.FileName), sortedfile.Label, exceptions, sortedfile.Score));
+				else 
+						Files.Add(new QFile(Path.Combine(parentDir, sortedfile.FileName), "", exceptions, sortedfile.Score));
+				} 
 
             }
             catch (Exception ex)
@@ -112,6 +116,7 @@ namespace SortFaxes
 		public string FilePath;
 		public string DestinationDir{get;set;}
 		public DateTime DateEvent{get;set;}
+		public float Score { get; set; }
 		 
 		public QFile()
 		{
@@ -120,6 +125,7 @@ namespace SortFaxes
 			DestinationDir="";
 			DateEvent=new DateTime(0);
 			Copy=false;
+			Score = -1;
 		}
 
 		#region IComparable implementation
@@ -142,7 +148,9 @@ namespace SortFaxes
 			FilePath="";
 			DestinationDir="";
 			DateEvent=new DateTime(0);
-			Copy=false;}
+			Copy=false;
+			Score = -1;
+			}
 			
 			FilePath=path;
 			FileName=path.Split('\\').Last();
@@ -154,9 +162,9 @@ namespace SortFaxes
 			if(String.IsNullOrWhiteSpace(DestinationDir)) Copy=false;
 			if(exceptions.Contains(FilePath))
 				Copy=false;
-
+			Score = -1;
 		}
-		public QFile(string path, string dest, List<string> exceptions)
+		public QFile(string path, string dest, List<string> exceptions, float score)
 		{
 			if (!File.Exists(path))
 			{
@@ -177,7 +185,7 @@ namespace SortFaxes
 			if (String.IsNullOrWhiteSpace(DestinationDir)) Copy = false;
 			if (exceptions.Contains(FilePath))
 				Copy = false;
-
+			Score = (float)Math.Round(score*100,2);
 		}
 
 

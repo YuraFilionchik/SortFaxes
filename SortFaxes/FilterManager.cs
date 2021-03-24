@@ -20,7 +20,9 @@ namespace SortFaxes
 	public partial class FilterManager : Form
 	{
 		public static bool UseML;
-		public FilterManager(bool useML)
+		public static bool UseFilter;
+		public static int MinScore;
+		public FilterManager(bool useML, bool useFilter, int minScore)
 		{
 			//
 			// The InitializeComponent() call is required for Windows Forms designer support.
@@ -31,11 +33,24 @@ namespace SortFaxes
 			this.FormClosing+= managerFormClosing;
 			textBox2.KeyPress+= textBox2_KeyPress;
 			label3.Click+= label3_Click;
-			checkBox1.Checked = useML;
 			UseML = useML;
+			MinScore = minScore;
+			UseFilter = (!useFilter && !useML)|| useFilter;
+			if (UseFilter && UseML) radioButton1.Checked = true;
+			else if (UseML && !UseFilter) radioButton2.Checked = true;
+			else radioButton3.Checked = true; ;
+            textBox1.TextChanged += TextBox1_TextChanged;
+			textBox1.Text = MinScore.ToString();
 		}
-		
-		void DisplayFilters()
+
+        private void TextBox1_TextChanged(object sender, EventArgs e)
+        {
+			int value;
+			if (int.TryParse(textBox1.Text, out value) && value >= 0 && value <= 100)
+				MinScore = value;
+        }
+
+        void DisplayFilters()
 	{
 		lbDirs.Items.Clear();
 			foreach (CONSTS.Filter filter in CONSTS.Filters) {
@@ -70,20 +85,13 @@ namespace SortFaxes
 			if(selectedFilter!=null)
 				lbWords.Items.AddRange(selectedFilter.words.ToArray());
 			
+
+
 		}
 		//add Directory
 		void Button1Click(object sender, EventArgs e)
 		{
-			if(string.IsNullOrWhiteSpace(textBox1.Text))return;
-			if(Directory.Exists(textBox1.Text) && !lbDirs.Items.Contains(textBox1.Text))
-			{
-				lbDirs.Items.Add(textBox1.Text);
-				CONSTS.Filters.Add(new CONSTS.Filter()
-				                   {directory=textBox1.Text.Trim(),
-				                   	priority=1,
-				                   	words=new List<string>()});
-				
-			}
+			
 		}
 		
 		//add word
@@ -134,21 +142,28 @@ namespace SortFaxes
 		{
 			folderBrowserDialog1.SelectedPath=CONSTS.SelectedPath;
 		DialogResult dr=	folderBrowserDialog1.ShowDialog();
-		if (dr== DialogResult.OK) textBox1.Text=folderBrowserDialog1.SelectedPath;
+			if (dr != DialogResult.OK) return;
+			var newDir = folderBrowserDialog1.SelectedPath;
+			if (Directory.Exists(newDir) && !lbDirs.Items.Contains(newDir))
+			{
+				lbDirs.Items.Add(newDir);
+				CONSTS.Filters.Add(new CONSTS.Filter()
+				{
+					directory = newDir.Trim(),
+					priority = 1,
+					words = new List<string>()
+				});
+			}
 		}
 
-        private void checkBox1_CheckedChanged(object sender, EventArgs e)
-        {
-			EnableControls(!checkBox1.Checked);
-			UseML = checkBox1.Checked;
-        }
+      
 
 		private void EnableControls(bool state)
         {
 			lbWords.Enabled = state;
 			button2.Enabled = state;
 			textBox2.Enabled = state;
-			btRebuild.Visible = state;
+			btRebuild.Visible = !state;
 		}
 
         private void btRebuild_Click(object sender, EventArgs e)
@@ -161,5 +176,33 @@ namespace SortFaxes
 			btRebuild.Enabled = true;
 			btRebuild.Text = oldtext;
 		}
+
+		//только нейросеть
+        private void radioButton2_CheckedChanged(object sender, EventArgs e)
+        {
+			CheckRadio();
+		}
+
+		//Обычный + нейросеть
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+			CheckRadio();
+		}
+
+		//только обычный
+        private void radioButton3_CheckedChanged(object sender, EventArgs e)
+        {
+			CheckRadio();
+        }
+		private void CheckRadio()
+        {
+			EnableControls(!radioButton2.Checked);
+			UseML = radioButton2.Checked || radioButton1.Checked;
+			UseFilter = radioButton1.Checked || radioButton3.Checked;
+		}
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
     }
 }
