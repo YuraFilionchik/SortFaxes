@@ -85,6 +85,9 @@ namespace SortFaxes
             this.destinationDirDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewComboBoxColumn();
             this.dateEventDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.bindingSource1 = new System.Windows.Forms.BindingSource(this.components);
+            this.отметитьВсеToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.снятьВсеОтметкиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.отметитьВыбранныеToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
@@ -152,6 +155,7 @@ namespace SortFaxes
             // 
             this.comboFilters.Name = "comboFilters";
             this.comboFilters.Size = new System.Drawing.Size(121, 23);
+            this.comboFilters.Click += new System.EventHandler(this.comboFilters_Click);
             // 
             // tbSearch
             // 
@@ -217,9 +221,12 @@ namespace SortFaxes
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.добавитьФайлВИсключениенеПеремещатьToolStripMenuItem,
-            this.удалитьФайлИзИсключенияToolStripMenuItem});
+            this.удалитьФайлИзИсключенияToolStripMenuItem,
+            this.отметитьВыбранныеToolStripMenuItem,
+            this.отметитьВсеToolStripMenuItem,
+            this.снятьВсеОтметкиToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(336, 48);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(336, 114);
             // 
             // добавитьФайлВИсключениенеПеремещатьToolStripMenuItem
             // 
@@ -329,6 +336,30 @@ namespace SortFaxes
             this.bindingSource1.AllowNew = false;
             this.bindingSource1.DataSource = typeof(SortFaxes.QFile);
             // 
+            // отметитьВсеToolStripMenuItem
+            // 
+            this.отметитьВсеToolStripMenuItem.BackColor = System.Drawing.SystemColors.GradientActiveCaption;
+            this.отметитьВсеToolStripMenuItem.Name = "отметитьВсеToolStripMenuItem";
+            this.отметитьВсеToolStripMenuItem.Size = new System.Drawing.Size(335, 22);
+            this.отметитьВсеToolStripMenuItem.Text = "Отметить все";
+            this.отметитьВсеToolStripMenuItem.Click += new System.EventHandler(this.отметитьВсеToolStripMenuItem_Click);
+            // 
+            // снятьВсеОтметкиToolStripMenuItem
+            // 
+            this.снятьВсеОтметкиToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLight;
+            this.снятьВсеОтметкиToolStripMenuItem.Name = "снятьВсеОтметкиToolStripMenuItem";
+            this.снятьВсеОтметкиToolStripMenuItem.Size = new System.Drawing.Size(335, 22);
+            this.снятьВсеОтметкиToolStripMenuItem.Text = "Снять все отметки";
+            this.снятьВсеОтметкиToolStripMenuItem.Click += new System.EventHandler(this.снятьВсеОтметкиToolStripMenuItem_Click);
+            // 
+            // отметитьВыбранныеToolStripMenuItem
+            // 
+            this.отметитьВыбранныеToolStripMenuItem.BackColor = System.Drawing.Color.MediumAquamarine;
+            this.отметитьВыбранныеToolStripMenuItem.Name = "отметитьВыбранныеToolStripMenuItem";
+            this.отметитьВыбранныеToolStripMenuItem.Size = new System.Drawing.Size(335, 22);
+            this.отметитьВыбранныеToolStripMenuItem.Text = "Отметить выбранные";
+            this.отметитьВыбранныеToolStripMenuItem.Click += new System.EventHandler(this.отметитьВыбранныеToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -359,6 +390,9 @@ namespace SortFaxes
 
         private System.Windows.Forms.TextBox tbLog;
         private System.Windows.Forms.ToolStripMenuItem tsMenuUseML;
+        private System.Windows.Forms.ToolStripMenuItem отметитьВсеToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem снятьВсеОтметкиToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem отметитьВыбранныеToolStripMenuItem;
     }
 
 

@@ -148,7 +148,7 @@ namespace SortFaxes
 			lbWords.Enabled = state;
 			button2.Enabled = state;
 			textBox2.Enabled = state;
-			btRebuild.Visible = state;
+			btRebuild.Visible = !state;
 		}
 
         private void btRebuild_Click(object sender, EventArgs e)

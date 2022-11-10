@@ -106,19 +106,17 @@ namespace SortFaxes
 					row.DefaultCellStyle.BackColor = Color.IndianRed;
 			}
 		}
+
+		//Select quick filters
 		void comboFilters_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			
+			if (AllFiles == null || AllFiles.Files == null) return;
 			string selectedFilterString=comboFilters.SelectedItem.ToString();
-			if(selectedFilterString=="Все фильтры") filters=CONSTS.Filters;
-			else {
-				filters=new List<CONSTS.Filter>();
-			foreach (CONSTS.Filter filter in CONSTS.Filters) {
-				if(filter.directory.TrimEnd('\\').Split('\\').Last()==selectedFilterString.Trim())
-					filters.Add(filter);
-				}
-			}
-			ReadAndDisplayFilesInDGV(IncomingDir,filters,checkBox1.Checked,false);
+			if(selectedFilterString=="Все фильтры")
+				DisplayFilesInDGV(AllFiles.Files);
+			else
+			DisplayFilesInDGV(AllFiles.Files.Where(x => x.DestinationDir.Contains(selectedFilterString)));
+			//ReadAndDisplayFilesInDGV(IncomingDir,filters,checkBox1.Checked,false);
 			
 		}
 //open file
@@ -431,6 +429,7 @@ namespace SortFaxes
 		}
 		void CheckBox1CheckedChanged(object sender, EventArgs e)
 		{
+			if (AllFiles == null || AllFiles.Files == null) return;
 			DisplayFilesInDGV(AllFiles.Files);
 		
 		}
@@ -466,6 +465,35 @@ namespace SortFaxes
         private void tsMenuUseML_Click(object sender, EventArgs e)
         {
 			UseML = tsMenuUseML.Checked;
+        }
+
+        private void отметитьВсеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            for(int i=0;i<dataGridView1.Rows.Count;i++)
+            {
+				dataGridView1.Rows[i].Cells[0].Value = true;
+            }
+        }
+
+        private void снятьВсеОтметкиToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+			for (int i = 0; i < dataGridView1.Rows.Count; i++)
+			{
+				dataGridView1.Rows[i].Cells[0].Value = false;
+			}
+		}
+
+        private void отметитьВыбранныеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (DataGridViewRow row in dataGridView1.SelectedRows)
+            {
+				dataGridView1.Rows[row.Index].Cells[0].Value = !(bool)dataGridView1.Rows[row.Index].Cells[0].Value;
+			}
+        }
+
+        private void comboFilters_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
