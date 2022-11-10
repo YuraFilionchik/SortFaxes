@@ -27,6 +27,8 @@ namespace SortFaxes
 		public List<CONSTS.Filter> filters;
 		public QueueFiles AllFiles;
 		private bool UseML = false;
+		private bool UseFilter = true;
+		private int MinScore;  //minimal level of prediction
 		public MainForm()
 		{
 
@@ -41,7 +43,6 @@ namespace SortFaxes
 			comboFilters.SelectedIndexChanged+= comboFilters_SelectedIndexChanged;
 			dataGridView1.DataError+= dataGridView1_DataError;
 			tbSearch.TextChanged+= tbSearch_TextChanged;
-			//folderBrowserDialog1.SelectedPath=@"\\175.16.1.1\e\Принятые Факсы";
 			filters=CONSTS.Filters;
             QueueFiles.QueueEvent += QueueFiles_QueueEvent;
 		
@@ -61,8 +62,8 @@ namespace SortFaxes
 			comboFilters.SelectedItem="Все фильтры";
 			
 			#endregion
-			//if(IncomingDir!=null && Directory.Exists(IncomingDir))
-			//	ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked, false);
+			if(IncomingDir!=null && Directory.Exists(IncomingDir))
+				ReadAndDisplayFilesInDGV(IncomingDir, filters,checkBox1.Checked, false);
 			
 		}
 
@@ -190,10 +191,12 @@ namespace SortFaxes
 		// manage filters
 		void ФильтрыToolStripMenuItemClick(object sender, EventArgs e)
 		{
-			FilterManager FM=new FilterManager(UseML);
+			FilterManager FM=new FilterManager(UseML,UseFilter,MinScore);
 			FM.ShowDialog();
 			UseML = FilterManager.UseML;
 			tsMenuUseML.Checked = UseML;
+			MinScore = FilterManager.MinScore;
+			UseFilter = FilterManager.UseFilter;
 			filters=CONSTS.Filters;
 			SaveFiltersCFG(cfg);
 		}
@@ -280,6 +283,12 @@ namespace SortFaxes
 				}
 				string useml = cfg.ReadINI("SETTINGS", "UseML");
 				bool.TryParse(useml, out UseML);
+
+				string useFilter = cfg.ReadINI("SETTINGS", "UseFilter");
+				bool.TryParse(useFilter, out UseFilter);
+
+				string minscore = cfg.ReadINI("SETTINGS", "MinScore");
+				int.TryParse(minscore, out MinScore);
 			}
 			
 		}
@@ -316,6 +325,8 @@ namespace SortFaxes
 			if(IncomingDir!=null && !String.IsNullOrWhiteSpace(IncomingDir))
 				cfg.Write("SETTINGS","SelectedDirectory",IncomingDir);
 			cfg.Write("SETTINGS", "UseML", UseML.ToString());
+			cfg.Write("SETTINGS", "UseFilter", UseFilter.ToString());
+			cfg.Write("SETTINGS", "MinScore", MinScore.ToString());
 		}
 		/// <summary>
 		/// Read and filtering files from incDir directory
@@ -328,10 +339,21 @@ namespace SortFaxes
 			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.Clear();
 			(dataGridView1.Columns[2] as DataGridViewComboBoxColumn).Items.AddRange(CONSTS.DIRS());
 			var filepaths=Directory.GetFiles(incDir);
-			if(UseML)
-				AllFiles=new QueueFiles(filepaths, filters, CONSTS.FilesExceptions, rebuildModel);//отфильтрованный список файлов
-			else
+			if(UseFilter)
+            {
 				AllFiles = new QueueFiles(filepaths, filters, CONSTS.FilesExceptions);//отфильтрованный список файлов
+				if(UseML)
+                {
+					var predictedFiles=  new QueueFiles(filepaths, filters, CONSTS.FilesExceptions, rebuildModel, MinScore);//отфильтрованный список файлов
+                    for (int i = 0; i < AllFiles.Files.Count; i++) //для всех нераспознанных файлов применяем результаты нейросети
+                    {
+						if (String.IsNullOrWhiteSpace(AllFiles.Files[i].DestinationDir))
+							AllFiles.Files[i] = predictedFiles.Files.First(x => x.FileName == AllFiles.Files[i].FileName);
+                    }
+				}
+            }else if(UseML)
+				AllFiles=new QueueFiles(filepaths, filters, CONSTS.FilesExceptions, rebuildModel,MinScore);//отфильтрованный список файлов
+			
 			AllFiles.Files.Sort(new QFileComparer());
 			if(HideUncheked)bindingSource1.DataSource=AllFiles.Files.Where(x=>x.Copy);
 			else bindingSource1.DataSource=AllFiles.Files;
